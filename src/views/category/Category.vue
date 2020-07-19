@@ -106,16 +106,34 @@
 </template>
 
 <script>
-  import BScroll from '@better-scroll/core'
+  import BScroll from 'better-scroll'
+  
   export default {
     name: "Category",
+    data() {
+      return {
+        
+      }
+    },
     created() {
-      
+      this.scroll = null
     },
     mounted() {
-      let BS = new BScroll('.wrapper', {
-
+      this.scroll = new BScroll('.wrapper', {
+        // probeType: 3,
+        scrollY: true,
+        pullUpLoad: true
       })
+      // this.scroll.on('scroll', position => {
+      //   console.log(position);
+      // })
+      this.scroll.on('pullingUp', () => {
+        console.log('上啦加载');
+        
+      })
+    },
+    methods: {
+      
     }
   }
 </script>
