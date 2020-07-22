@@ -34,14 +34,19 @@
         pullUpLoad: this.pullUpLoad
       })
       //监听滚动位置后展示 回到顶部功能
-      this.scroll.on('scroll', position => {
-        this.$emit('scrollY', position)
-      })
-      this.scroll.on('pullingUp', () => {
-        this.$emit('pullingUp')
-        
-      })
+      if(this.probeType === 2 || this.probeType === 3) {
+        this.scroll.on('scroll', (position) => {
+          this.$emit('scroll', position)
+        })
+      }
+      if(this.pullUpLoad) {
+        this.scroll.on('pullingUp', () => {
+          this.$emit('pullingUp')
+        })
+      }
+      
     },
+    
     methods: {
       //自己封装一个方法方便在 Home组件里直接调用  这里设置time=500是一个默认值
       scrollTo(x, y, time = 500) {
@@ -49,6 +54,12 @@
       },
       finishPullUp() {
         this.scroll.finishPullUp()
+      },
+      refresh() {
+        this.scroll.refresh()
+      },
+      getScrollY() {
+        return this.scroll ? this.scroll.y : 0
       }
     }
   }

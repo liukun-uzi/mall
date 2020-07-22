@@ -1,11 +1,22 @@
 <template>
-  <div id="home">
+  <div id="home" class="wrapper">
     <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
-    <scroll class="contentbox" ref="scroll" :probe-type="3" @scrollY="contentScroll" :pull-up-load="true" @pullingUp="loadMore">
-      <home-swiper :banners="banners"></home-swiper>
-      <recommend-view :recommends="recommends"></recommend-view>
+    <tab-control :titles="['流行', '新款', '精选']"
+                 @tabClick="tabClick"
+                 ref="tabControl1"
+                 class="tab-control" v-show="isTabFixed"/>
+    <scroll class="content" 
+            ref="scroll" 
+            :probe-type="3" 
+            @scroll="contentScroll" 
+            :pull-up-load="true" 
+            @pullingUp="loadMore">
+      <home-swiper :banners="banners" @swiperImageLoad="swiperImageLoad"/>
+      <recommend-view :recommends="recommends" />
       <feature-view/>
-      <tab-control class="tab-control" :titles="['流行','新款','精选']" @tabClick="tabClick"/>
+      <tab-control :titles="['流行','新款','精选']" 
+                    @tabClick="tabClick" 
+                    ref="tabControl2"/>
       <goods-list :goods="showGoods"/>
     </scroll>
     <!-- 监听组件点击 必须要加修饰符.native -->
@@ -27,7 +38,7 @@
 
 
   import {getHomeMultidata, getHomeGoods} from 'network/home'
- 
+  import {debounce} from 'common/utiles'
 
   export default {
     name: "Home",
@@ -60,7 +71,10 @@
           }
         },
         currentType: 'pop',
-        isShowBackTop: false
+        isShowBackTop: false,
+        tabOffsetTop: 622,
+        isTabFixed: false,
+        saveY: 0
       }
     },
     computed: {
@@ -68,14 +82,39 @@
         return this.goods[this.currentType].list
       }
     },
+    destroyed() {
+      console.log('销毁');
+    },
+    //活跃状态
+    activated() {
+      this.$refs.scroll.refresh()
+      this.$refs.scroll.scrollTo(0, this.saveY, 0)
+    },
+    // 离开状态
+    deactivated() {
+      this.saveY = this.$refs.scroll.getScrollY()
+    },
     created() {
       //1.请求多个数据
       this.getHomeMultidata();
       this.getHomeGoods('pop')
       this.getHomeGoods('new')
       this.getHomeGoods('sell')
+
+      //监听goodItem中的图片加载完成
+      // this.$bus.$on('itemImageLoad', () => {
+      //   this.$refs.scroll && this.$refs.scroll.refresh()
+      // })
+    },
+    mounted() {
+      //图片加载完成的事件监听
+      const refresh = debounce(this.$refs.scroll.refresh, 50)
+      this.$bus.$on('itemImageLoad', () => {
+        refresh()
+      })
     },
     methods: {
+      
       //事件监听相关的方法
       tabClick(index) {
         switch (index) {
@@ -89,6 +128,8 @@
             this.currentType = 'sell'
             break
         }
+        this.$refs.tabControl1.currentIndex = index;
+        this.$refs.tabControl2.currentIndex = index;
       },
       backClick() {
         //this.$refs.scroll 调取scroll组件对象   然后在调scroll属性  然后再掉scroll属性里的scrollTop方法  容易看不懂
@@ -96,18 +137,28 @@
         this.$refs.scroll.scrollTo(0, 0)
       },
       contentScroll(position) {
+        //判断backTop是否显示
         this.isShowBackTop = (-position.y) > 1000
+        //决定tabcontrol是否吸顶
+        this.isTabFixed = (-position.y) > this.tabOffsetTop
       },
+      //加载更多
       loadMore() {
         this.getHomeGoods(this.currentType)
-        this.$refs.scroll.scroll.refresh()
-
       },
+      //实现轮播图加载监控
+      swiperImageLoad() {
+        //获取tabControl的offsetTop
+        //所有的组件都有一个属性  $el 用于获取组件的元素
+        // this.tabOffsetTop = this.$refs.tabControl2.$el.offsetTop;
+        console.log(this.tabOffsetTop); 
+      },
+      
       //网络请求相关的方法
       getHomeMultidata() {
         getHomeMultidata().then(res => {
           this.banners = res.data.banner.list;
-          // this.recommends = res.data.recommend.list;
+          this.recommends = res.data.recommend.list;
         })
       },
       getHomeGoods(type) {
@@ -116,7 +167,7 @@
           this.goods[type].list.push(...res.data.list)
           this.goods[type].page += 1
           this.$refs.scroll.finishPullUp()
-          this.$refs.scroll.scroll.refresh()
+          // this.$refs.scroll && this.$refs.scroll.scroll.refresh()
 
         })
       } 
@@ -126,27 +177,33 @@
 
 <style scoped>
   #home {
-    padding-top: 44px;
+    /*padding-top: 44px;*/
+    height: 100vh;
+    position: relative;
   }
   .home-nav {
     background-color: var(--color-tint);
     color: #fff;
-    position: fixed;
+    /* 子啊使用浏览器原生滚动时   为了让导肮不跟随一起滚动 */
+    /* 现在使用better-scroll实现局部滚动，这里就没有必要了 */
+    /* position: fixed;
     left: 0;
     top: 0;
     right: 0;
-    z-index: 9;
+    z-index: 9; */
   }
   .tab-control {
-    /* position: sticky; */
-    top: 44px;
-    background-color: #fff;
-    z-index: 9;
+    position: relative;
+    z-index: 9; 
   }
-  .contentbox {
+ 
+  .content {
     overflow: hidden;
     position: absolute;
     top: 44px;
     bottom: 49px;
+    left: 0;
+    right: 0;
   }
+  
 </style>

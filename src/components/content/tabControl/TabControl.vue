@@ -36,6 +36,7 @@ export default {
     display: flex;
     text-align: center;
     font-size: 15px;
+    background-color: #fff;
   }
 
   .tab-control-item {
